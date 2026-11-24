@@ -1,0 +1,29 @@
+{
+  "name": "jarvis-predict",
+  "version": "1.0.0",
+  "description": "J.A.R.V.I.S. Predict - Real-time multilingual next-word prediction assistant",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node test/multilang.test.js"
+  },
+  "keywords": [
+    "jarvis",
+    "next-word-prediction",
+    "nlp",
+    "multilingual",
+    "ngram",
+    "llm",
+    "autocomplete"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

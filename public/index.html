@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>J.A.R.V.I.S. PREDICT // Multilingual Neural Text Engine</title>
+  <meta name="description" content="Production-quality next-word prediction assistant powered by real-time hybrid local n-gram and LLM architecture in any language and script.">
+  
+  <!-- Preconnect to Google Fonts for wide script coverage -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans:wght@400;600&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="booting">
+
+  <!-- Skip link for keyboard accessibility -->
+  <a href="#consoleInput" class="skip-link">Skip to Neural Console</a>
+
+  <!-- ARIA Live Region for Screen Readers -->
+  <div id="srAnnouncements" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Background Quantum Grid & Dust Canvas -->
+  <canvas id="bgCanvas" class="bg-canvas" aria-hidden="true"></canvas>
+  <div class="scanline-overlay" aria-hidden="true"></div>
+
+  <!-- Cinematic Boot Sequence Overlay -->
+  <section id="bootScreen" class="boot-screen" role="dialog" aria-modal="true" aria-label="System Initializing">
+    <div class="boot-content">
+      <div class="boot-reactor-ring">
+        <svg class="boot-rings-svg" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-bg" cx="60" cy="60" r="54" />
+          <circle class="ring-dash-outer" cx="60" cy="60" r="50" />
+          <circle class="ring-dash-inner" cx="60" cy="60" r="42" />
+          <circle id="bootProgressCircle" class="ring-progress" cx="60" cy="60" r="32" />
+        </svg>
+        <div class="boot-core-glow"></div>
+        <div class="boot-percent" id="bootPercent">0%</div>
+      </div>
+
+      <div class="boot-log-container">
+        <div class="boot-header-title">STARK INDUSTRIES // MARK VII OS</div>
+        <div class="boot-console" id="bootConsoleLines" aria-live="polite">
+          <div class="boot-line">&gt; INITIALIZING J.A.R.V.I.S. PROTOCOLS...</div>
+        </div>
+      </div>
+
+      <div class="boot-actions">
+        <button id="skipBootBtn" class="hud-btn hud-btn-outline" type="button">
+          <span class="btn-bracket">[</span>
+          <span class="btn-text">SKIP INITIALIZATION</span>
+          <span class="btn-bracket">]</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Persistent HUD Frame -->
+  <div class="hud-frame" aria-hidden="true">
+    <div class="corner-bracket top-left"></div>
+    <div class="corner-bracket top-right"></div>
+    <div class="corner-bracket bottom-left"></div>
+    <div class="corner-bracket bottom-right"></div>
+    <div class="hud-grid-border"></div>
+  </div>
+
+  <!-- Application Shell -->
+  <div class="app-layout">
+    
+    <!-- Top HUD Status Bar -->
+    <header class="hud-header" role="banner">
+      <div class="header-left">
+        <div class="brand-group">
+          <!-- Arc Reactor Orb -->
+          <div class="arc-reactor-wrapper" title="J.A.R.V.I.S. Neural Core">
+            <canvas id="reactorCanvas" width="46" height="46" class="reactor-canvas"></canvas>
+            <div class="reactor-pulse-ring"></div>
+          </div>
+          <div class="brand-meta">
+            <div class="brand-title">
+              <span class="brand-prefix">J.A.R.V.I.S.</span>
+              <span class="brand-suffix">PREDICT</span>
+            </div>
+            <div class="brand-tagline">NEURAL REAL-TIME TEXT ENGINE // MK-VII</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Telemetry Stats -->
+      <div class="hud-telemetry" role="region" aria-label="System Telemetry">
+        <div class="telemetry-item" title="Model Architecture Status">
+          <span class="telemetry-label">CORE:</span>
+          <span id="modelStatusBadge" class="telemetry-value active-cyan">● LOCAL N-GRAM</span>
+        </div>
+
+        <div class="telemetry-item" title="Prediction Request Latency">
+          <span class="telemetry-label">LATENCY:</span>
+          <span id="latencyBadge" class="telemetry-value">0 ms</span>
+        </div>
+
+        <div class="telemetry-item" title="Detected Language & Script">
+          <span class="telemetry-label">SCRIPT:</span>
+          <span id="langScriptBadge" class="telemetry-value badge-pill">LANG: EN · Latin</span>
+        </div>
+
+        <div class="telemetry-item" title="Total Words Typed">
+          <span class="telemetry-label">WORDS:</span>
+          <span id="wordsTypedBadge" class="telemetry-value">0</span>
+        </div>
+
+        <div class="telemetry-item" title="Current Time">
+          <span class="telemetry-label">TIME:</span>
+          <span id="hudClock" class="telemetry-value">00:00:00</span>
+        </div>
+      </div>
+
+      <!-- Header Controls -->
+      <div class="header-right">
+        <!-- Manual Language Override -->
+        <label for="langSelector" class="sr-only">Language Override</label>
+        <select id="langSelector" class="hud-select" aria-label="Language Selector">
+          <option value="auto">AUTO-DETECT</option>
+          <option value="en">English (Latin)</option>
+          <option value="hi">Hindi (हिन्दी)</option>
+          <option value="ar">Arabic (العربية RTL)</option>
+          <option value="ja">Japanese (日本語)</option>
+          <option value="gu">Gujarati (ગુજરાતી)</option>
+          <option value="mr">Marathi (मराठी)</option>
+          <option value="he">Hebrew (עברית RTL)</option>
+          <option value="zh">Chinese (中文)</option>
+          <option value="es">Spanish (Español)</option>
+          <option value="fr">French (Français)</option>
+          <option value="de">German (Deutsch)</option>
+          <option value="ru">Russian (Русский)</option>
+        </select>
+
+        <!-- Audio Toggle -->
+        <button id="soundToggleBtn" class="hud-icon-btn" type="button" aria-label="Toggle Sound Effects" title="Sound Effects ON/OFF">
+          <svg id="soundIconOn" class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+            <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+          </svg>
+          <svg id="soundIconOff" class="icon-svg hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/>
+          </svg>
+        </button>
+
+        <!-- Settings Modal Trigger -->
+        <button id="settingsModalBtn" class="hud-icon-btn" type="button" aria-label="Open Settings" title="System Settings">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="main-container" id="mainContent">
+
+      <!-- Central Holographic Console Deck -->
+      <section class="console-deck" id="consoleDeck">
+        
+        <!-- Console Header Strip -->
+        <div class="console-top-bar">
+          <div class="deck-indicator">
+            <span class="live-dot"></span>
+            <span class="deck-title">NEURAL CONSOLE INPUT</span>
+            <span class="keyboard-legend">
+              <kbd>Tab</kbd> Accept word &bull; <kbd>Ctrl</kbd>+<kbd>&rarr;</kbd> Accept one &bull; <kbd>Esc</kbd> Dismiss
+            </span>
+          </div>
+
+          <div class="deck-actions">
+            <!-- Voice Input Button -->
+            <button id="voiceInputBtn" class="hud-pill-btn" type="button" title="Start Voice Dictation" aria-label="Voice Input">
+              <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+              <span id="voiceBtnLabel">VOICE</span>
+            </button>
+
+            <!-- Read Aloud (Voice of JARVIS) -->
+            <button id="speakTextBtn" class="hud-pill-btn" type="button" title="Voice of JARVIS reads text" aria-label="Read text aloud">
+              <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M15.54 8.46a5 5 0 010 7.07"/>
+              </svg>
+              <span>SPEAK</span>
+            </button>
+
+            <!-- Copy Text Button -->
+            <button id="copyTextBtn" class="hud-pill-btn" type="button" title="Copy text to clipboard" aria-label="Copy Text">
+              <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+              <span id="copyBtnLabel">COPY</span>
+            </button>
+
+            <!-- Clear Button -->
+            <button id="clearConsoleBtn" class="hud-pill-btn danger" type="button" title="Clear console" aria-label="Clear Console">
+              <svg class="icon-svg-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+              <span>CLEAR</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- The Dual-Layer Interactive Editor Container -->
+        <div class="editor-viewport" id="editorViewport">
+          <!-- Light sweep laser effect bar -->
+          <div class="light-sweep-bar" id="lightSweepBar"></div>
+
+          <!-- Ghost text backdrop mirror layer -->
+          <div class="editor-backdrop" id="editorBackdrop" aria-hidden="true" dir="auto">
+            <span id="backdropPrefix" class="backdrop-prefix"></span><span id="ghostTextSpan" class="ghost-text-span"></span><span id="backdropSuffix" class="backdrop-suffix"></span>
+          </div>
+
+          <!-- Real user interactive text area -->
+          <textarea
+            id="consoleInput"
+            class="console-textarea"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+            dir="auto"
+            placeholder="Initialize typing in any language... (English, हिन्दी, العربية, 日本語, etc.)"
+            aria-label="J.A.R.V.I.S. Neural Console Input"
+            rows="6"
+          ></textarea>
+
+          <!-- Inline Decoding Scramble Overlay when accepting -->
+          <div id="decodeOverlay" class="decode-overlay hidden" aria-hidden="true"></div>
+        </div>
+
+        <!-- Prediction Alternatives (Clickable Chips Bar) -->
+        <div class="predictions-section" aria-label="Prediction Alternatives">
+          <div class="prediction-chips-header">
+            <span class="chips-title">NEURAL CANDIDATES:</span>
+            <span id="predictionMeta" class="chips-meta">Ready</span>
+          </div>
+
+          <div class="chips-cluster" id="predictionChipsCluster" role="listbox" aria-label="Top predicted next words">
+            <!-- Chips rendered dynamically -->
+            <div class="chip empty-hint">Focus or begin typing to trigger neural predictions...</div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- HUD Telemetry & Visualization Grid -->
+      <section class="analytics-deck">
+
+        <!-- Widget 1: Live Oscilloscope / Waveform Pulse -->
+        <div class="hud-card" id="waveformCard">
+          <div class="hud-card-header">
+            <span class="card-title">TYPING OSCILLOSCOPE</span>
+            <span id="wpmValue" class="hud-metric-accent">0 WPM</span>
+          </div>
+          <div class="hud-card-body canvas-center">
+            <canvas id="waveformCanvas" width="300" height="90" class="mini-canvas"></canvas>
+          </div>
+          <div class="hud-card-footer">
+            <span>RHYTHM PULSE DYNAMICS</span>
+            <span id="cpmValue">0 CPM</span>
+          </div>
+        </div>
+
+        <!-- Widget 2: Neural Prediction Graph Visualizer -->
+        <div class="hud-card graph-card-wide" id="radarCard">
+          <div class="hud-card-header">
+            <div class="card-title-group">
+              <span class="card-title">NEURAL PREDICTION GRAPH</span>
+              <span id="graphActiveModeBadge" class="hud-badge-sm">MARKOV TREE</span>
+            </div>
+            <div class="graph-tab-cluster" role="tablist" aria-label="Graph Mode Switcher">
+              <button type="button" class="graph-tab-btn active" data-graph-mode="network" role="tab" aria-selected="true">NETWORK</button>
+              <button type="button" class="graph-tab-btn" data-graph-mode="spectrum" role="tab" aria-selected="false">SPECTRUM</button>
+              <button type="button" class="graph-tab-btn" data-graph-mode="radar" role="tab" aria-selected="false">RADAR</button>
+            </div>
+          </div>
+          <div class="hud-card-body canvas-center">
+            <canvas id="radarCanvas" width="360" height="180" class="radar-canvas" aria-label="Neural transition prediction graph"></canvas>
+          </div>
+          <div class="hud-card-footer">
+            <span id="graphHintText">Click any node to select word</span>
+            <span id="radarTopProb">-- %</span>
+          </div>
+        </div>
+
+        <!-- Widget 3: Neural Performance & Accuracy Stats -->
+        <div class="hud-card" id="statsCard">
+          <div class="hud-card-header">
+            <span class="card-title">NEURAL EFFICIENCY</span>
+            <span id="accuracyValue" class="hud-metric-accent">100% ACCURACY</span>
+          </div>
+          <div class="hud-card-body stats-column">
+            <div class="stat-row">
+              <span class="stat-name">Words Suggested:</span>
+              <span id="statSuggestedCount" class="stat-data">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">Words Accepted:</span>
+              <span id="statAcceptedCount" class="stat-data">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">Local Corpus Words:</span>
+              <span id="statTrainedCount" class="stat-data">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">Active Script:</span>
+              <span id="statScriptText" class="stat-data">Latin</span>
+            </div>
+          </div>
+          <div class="hud-card-footer">
+            <div class="privacy-note" title="Privacy notice">
+              <svg class="icon-svg-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              <span>Zero data retained on server. Private &amp; secure.</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Bottom Footer Bar -->
+    <footer class="hud-footer" role="contentinfo">
+      <div class="footer-left">
+        <span class="system-id">STARK-JARVIS-v7.4 // PROD-STABLE</span>
+        <span class="footer-separator">&bull;</span>
+        <span class="footer-hint">Hotkeys: <kbd>1</kbd>-<kbd>5</kbd> for candidate chips &bull; <kbd>Esc</kbd> to clear suggestion</span>
+      </div>
+      <div class="footer-right">
+        <span id="connectionBadge" class="footer-status-pill online">SYSTEM ONLINE</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Settings & Customization Modal -->
+  <div id="settingsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-glyph">&sect;</span>
+          <h2 id="settingsTitle" class="modal-title">SYSTEM CONFIGURATION</h2>
+        </div>
+        <button id="closeSettingsBtn" class="hud-icon-btn" type="button" aria-label="Close Settings">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Setting: Local-only Mode -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">Local-Only Mode (Offline)</div>
+            <div class="setting-desc">Disable cloud LLM proxy completely and use 100% on-device n-gram engine. Zero network requests.</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle-switch">
+              <input type="checkbox" id="localOnlyToggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Setting: Debounce Delay -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">Prediction Debounce</div>
+            <div class="setting-desc">Delay on pause before issuing prediction query (<span id="debounceValueLabel">150</span> ms).</div>
+          </div>
+          <div class="setting-control slider-control">
+            <input type="range" id="debounceRange" min="50" max="500" step="25" value="150" class="hud-slider">
+          </div>
+        </div>
+
+        <!-- Setting: Max Candidates Count -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">Candidate Count</div>
+            <div class="setting-desc">Number of alternative suggestions displayed (<span id="maxSuggestionsLabel">5</span>).</div>
+          </div>
+          <div class="setting-control slider-control">
+            <input type="range" id="maxSuggestionsRange" min="3" max="5" step="1" value="5" class="hud-slider">
+          </div>
+        </div>
+
+        <!-- Setting: Sound FX -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">Interface Audio Feedback</div>
+            <div class="setting-desc">Play synthesized sci-fi harmonic feedback on keystrokes and acceptance.</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle-switch">
+              <input type="checkbox" id="soundFxToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Setting: Clear Model Memory -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <div class="setting-label">Reset Local N-Gram Memory</div>
+            <div class="setting-desc">Clear learned user phrases from localStorage and restore factory seed corpora.</div>
+          </div>
+          <div class="setting-control">
+            <button id="resetModelBtn" class="hud-btn hud-btn-outline danger" type="button">RESET MEMORY</button>
+          </div>
+        </div>
+
+        <!-- Privacy & Security Disclosure -->
+        <div class="privacy-box">
+          <div class="privacy-header">
+            <svg class="icon-svg-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+            <strong>PRIVACY &amp; LLM INTEGRATION</strong>
+          </div>
+          <p>
+            When Layer 2 LLM mode is active, only the last ~200 characters of context are transmitted over HTTPS to your secure backend proxy server to generate next-word probabilities. The LLM API key remains strictly stored in the server <code>.env</code> file and is never exposed to the client. Toggle <strong>Local-Only Mode</strong> above to execute purely on-device without network transmission.
+          </p>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button id="closeModalFooterBtn" class="hud-btn hud-btn-primary" type="button">CONFIRM &amp; CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core App Scripts -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
